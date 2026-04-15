@@ -11,9 +11,9 @@ PORT=${PORT:-8000}
 # Crear directorios necesarios
 mkdir -p engine/sessions engine/media
 
-# 1. Engine (Baileys + Redis) — output a stdout para ver en Railway logs
+# 1. Engine (Baileys + Redis) — compilado TypeScript
 echo "[1/3] Arrancando Engine..."
-cd /app/engine && node connect.js 2>&1 &
+cd /app/engine && node dist/index.js 2>&1 &
 ENGINE_PID=$!
 cd /app
 

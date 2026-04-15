@@ -9,11 +9,13 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# ── Engine (Node.js) ──────────────────────────────────
-COPY engine/package*.json engine/
-RUN cd engine && npm ci --production 2>/dev/null || cd engine && npm install --production
+# ── Engine (Node.js) — instalar deps + compilar TypeScript
+COPY engine/package*.json engine/tsconfig.json engine/
+RUN cd engine && npm ci 2>/dev/null || cd engine && npm install
 
-COPY engine/ engine/
+COPY engine/src/ engine/src/
+COPY engine/connect.js engine/
+RUN cd engine && npx tsc && mkdir -p sessions media
 
 # ── API + Bot (Python) ────────────────────────────────
 COPY api/requirements.txt api/
