@@ -11,15 +11,15 @@ PORT=${PORT:-8000}
 # Crear directorios necesarios
 mkdir -p engine/sessions engine/media
 
-# 1. Engine (Baileys + Redis)
+# 1. Engine (Baileys + Redis) — output a stdout para ver en Railway logs
 echo "[1/3] Arrancando Engine..."
-cd /app/engine && node connect.js > /tmp/engine.log 2>&1 &
+cd /app/engine && node connect.js 2>&1 &
 ENGINE_PID=$!
 cd /app
 
-# 2. AI Bot (Claude)
+# 2. AI Bot (Claude) — output a stdout
 echo "[2/3] Arrancando AI Bot..."
-python3 run_ai.py > /tmp/bot.log 2>&1 &
+python3 run_ai.py 2>&1 &
 BOT_PID=$!
 
 # 3. API (FastAPI) — en foreground para que Railway lo detecte
