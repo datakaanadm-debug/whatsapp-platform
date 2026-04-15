@@ -22,17 +22,18 @@ async function connect() {
     if (!redis) redis = new Redis(process.env.REDIS_URL);
     const logger = pino({ level: 'silent' });
 
-    console.log(`[Intento ${attempt}] Conectando a WhatsApp...`);
+    console.log(`[Intento ${attempt}] Conectando a WhatsApp... (sessDir: ${SESS_DIR})`);
 
     const sock = makeWASocket({
         auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger) },
-        browser: Browsers.ubuntu('Chrome'),
+        browser: ['WhatsApp Platform', 'Chrome', '22.0'],
         logger,
     });
 
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', async (u) => {
+        console.log('connection.update:', JSON.stringify({connection: u.connection, qr: !!u.qr, lastDisconnect: u.lastDisconnect?.error?.output?.statusCode}));
         if (u.qr) {
             await redis.set(`wa:qr:${CHANNEL_ID}`, u.qr, 'EX', 120);
             console.log('');
