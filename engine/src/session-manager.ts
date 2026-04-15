@@ -19,6 +19,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import pino from 'pino';
 import { RedisBridge } from './redis-bridge';
+import { useRedisBackedAuthState } from './redis-auth-state';
 import { MessageHandler } from './message-handler';
 import {
   mapConnectionUpdate,
@@ -77,8 +78,12 @@ export class SessionManager {
       const authDir = path.join(config.SESSIONS_DIR, channelId);
       await fs.mkdir(authDir, { recursive: true });
 
-      // Cargar estado de autenticación multi-dispositivo
-      const { state, saveCreds } = await useMultiFileAuthState(authDir);
+      // Cargar estado de autenticación — respaldado en Redis para sobrevivir redeploys
+      const { state, saveCreds } = await useRedisBackedAuthState(
+        channelId,
+        (this.redis as any).client,
+        authDir,
+      );
 
       // Obtener la última versión de Baileys
       const { version, isLatest } = await fetchLatestBaileysVersion();
@@ -387,17 +392,25 @@ export class SessionManager {
     try {
       // Verificar que el directorio de sesiones exista
       await fs.mkdir(config.SESSIONS_DIR, { recursive: true });
-      const entries = await fs.readdir(config.SESSIONS_DIR, { withFileTypes: true });
 
-      // Filtrar solo directorios (cada uno es una sesión)
-      const sessionDirs = entries.filter((e) => e.isDirectory());
+      // Buscar sesiones tanto en disco como en Redis (Redis sobrevive redeploys)
+      const diskEntries = await fs.readdir(config.SESSIONS_DIR, { withFileTypes: true });
+      const diskChannels = new Set(diskEntries.filter(e => e.isDirectory()).map(e => e.name));
+
+      const redisKeys = await (this.redis as any).client.keys('wa:auth:*');
+      const redisChannels = new Set(
+        (redisKeys || []).map((k: string) => k.replace('wa:auth:', ''))
+      );
+
+      const allChannels = new Set<string>([...diskChannels, ...(redisChannels as Set<string>)]);
+      const sessionDirs = Array.from(allChannels).map(name => ({ name: name as string, isDirectory: () => true }));
 
       if (sessionDirs.length === 0) {
         logger.info('No hay sesiones previas para restaurar');
         return;
       }
 
-      logger.info({ count: sessionDirs.length }, 'Sesiones encontradas para restaurar');
+      logger.info({ count: sessionDirs.length, disk: diskChannels.size, redis: redisChannels.size }, 'Sesiones encontradas para restaurar');
 
       // Restaurar cada sesión en paralelo (con límite de concurrencia)
       const MAX_CONCURRENT = 5;
@@ -407,9 +420,15 @@ export class SessionManager {
           batch.map(async (dir) => {
             const channelId = dir.name;
             try {
-              // Verificar que tenga archivos de auth (creds.json indica sesión válida)
+              // Verificar que haya credenciales en disco O en Redis
               const credsPath = path.join(config.SESSIONS_DIR, channelId, 'creds.json');
-              await fs.access(credsPath);
+              let hasCreds = false;
+              try { await fs.access(credsPath); hasCreds = true; } catch {}
+              if (!hasCreds) {
+                const inRedis = await (this.redis as any).client.hexists(`wa:auth:${channelId}`, 'creds.json');
+                hasCreds = inRedis === 1;
+              }
+              if (!hasCreds) { logger.warn({channelId}, 'Sin credenciales, saltando'); return; }
 
               logger.info({ channelId }, 'Restaurando sesión...');
               await this.createSession(channelId);

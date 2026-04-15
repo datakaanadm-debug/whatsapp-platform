@@ -12,7 +12,7 @@ import { logger } from './utils/logger';
  */
 export class RedisBridge {
   /** Cliente principal para publicar y comandos generales */
-  private client!: Redis;
+  public client!: Redis;
   /** Cliente dedicado para suscripciones (Redis requiere un cliente separado) */
   private subscriber!: Redis;
   private connected = false;
