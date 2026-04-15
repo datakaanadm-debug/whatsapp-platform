@@ -86,8 +86,8 @@ async function connect() {
             console.log(`Desconectado (code: ${code})`);
 
             if (code === 405 || code === 401) {
-                // Rate limit o sesion invalida - esperar y reintentar
-                const wait = Math.min(attempt * 15, 120);
+                // Rate limit — esperar MUCHO para no extender el ban
+                const wait = Math.min(attempt * 120, 600); // 2min, 4min, 6min... max 10min
                 console.log(`WhatsApp rechaza conexion. Reintentando en ${wait}s...`);
                 require('fs').rmSync(SESS_DIR, { recursive: true, force: true });
                 require('fs').mkdirSync(SESS_DIR, { recursive: true });
