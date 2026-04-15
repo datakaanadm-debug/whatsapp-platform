@@ -22,10 +22,21 @@ if _db_url.startswith("postgresql://"):
 elif _db_url.startswith("postgres://"):
     _db_url = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-# Neon.tech requiere SSL
+# Quitar sslmode del query string (asyncpg no lo acepta, usa ssl=True)
+if "sslmode=" in _db_url:
+    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+    _parsed = urlparse(_db_url)
+    _params = parse_qs(_parsed.query)
+    _params.pop("sslmode", None)
+    _clean_query = urlencode(_params, doseq=True)
+    _db_url = urlunparse(_parsed._replace(query=_clean_query))
+
+# Neon/Supabase requieren SSL
 _connect_args = {}
-if "neon.tech" in _db_url or "neon" in _db_url:
-    _connect_args = {"ssl": True}
+if "neon" in _db_url or "supabase" in _db_url:
+    import ssl as _ssl_mod
+    _ctx = _ssl_mod.create_default_context()
+    _connect_args = {"ssl": _ctx}
 
 # ── Motor asíncrono de SQLAlchemy ─────────────────────────────────
 engine: AsyncEngine = create_async_engine(
