@@ -22,13 +22,17 @@ if _db_url.startswith("postgresql://"):
 elif _db_url.startswith("postgres://"):
     _db_url = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-# asyncpg no acepta sslmode= en URL, necesita ssl=require como param
-# Reemplazar ?sslmode=require por ?ssl=require que asyncpg sí entiende
-_db_url = _db_url.replace("sslmode=require", "ssl=require")
+# Quitar TODOS los query params (asyncpg no acepta sslmode, channel_binding, etc.)
+if "?" in _db_url:
+    _db_url = _db_url.split("?")[0]
+
+# SSL para Neon/Supabase (hosts en la nube requieren SSL)
+_connect_args = {"ssl": True} if ("neon" in _db_url or "supabase" in _db_url or "railway" in _db_url) else {}
 
 # ── Motor asíncrono de SQLAlchemy ─────────────────────────────────
 engine: AsyncEngine = create_async_engine(
     _db_url,
+    connect_args=_connect_args,
     echo=False,
     pool_size=20,
     max_overflow=10,
