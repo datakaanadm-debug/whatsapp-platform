@@ -11,7 +11,7 @@ const Redis = require('ioredis');
 const pino = require('pino');
 require('dotenv').config();
 
-const CHANNEL_ID = '3e9c7ac1-26c3-4bb4-8ce1-8f60b01919b6';
+const CHANNEL_ID = process.env.CHANNEL_ID || '3302d4a7-f181-452c-86fd-15abbeaa715f';
 const SESS_DIR = path.resolve('./sessions/main');
 let redis;
 let attempt = 0;

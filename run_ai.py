@@ -26,7 +26,7 @@ log = logging.getLogger("arty")
 
 REDIS_URL = os.getenv("REDIS_URL")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-CHANNEL_ID = "3e9c7ac1-26c3-4bb4-8ce1-8f60b01919b6"
+CHANNEL_ID = os.getenv("CHANNEL_ID", "3302d4a7-f181-452c-86fd-15abbeaa715f")
 
 # Cargar system prompt
 SYSTEM_PROMPT = "Eres un asistente útil. Responde en español."

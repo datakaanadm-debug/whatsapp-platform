@@ -178,7 +178,13 @@ async def bot_stats():
     msgs_out = await redis_pool.get("bot:stats:messages_out") or "0"
     tokens_in = await redis_pool.get("bot:stats:tokens_in") or "0"
     tokens_out = await redis_pool.get("bot:stats:tokens_out") or "0"
-    ai_enabled = await redis_pool.get("wa:ai_enabled:3e9c7ac1-26c3-4bb4-8ce1-8f60b01919b6") or "false"
+    # Buscar ai_enabled para cualquier canal
+    ai_enabled = "false"
+    async for key in redis_pool.scan_iter("wa:ai_enabled:*"):
+        val = await redis_pool.get(key)
+        if val and val.lower() in ("true", "1"):
+            ai_enabled = "true"
+            break
     return {
         "messages_in": int(msgs_in),
         "messages_out": int(msgs_out),

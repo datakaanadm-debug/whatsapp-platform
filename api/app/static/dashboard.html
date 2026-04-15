@@ -202,7 +202,7 @@
 
 <script>
 const API_URL = window.location.origin;
-const CH_ID = '3e9c7ac1-26c3-4bb4-8ce1-8f60b01919b6';
+let CH_ID = null; // Se obtiene al cargar canales
 let apiKey = localStorage.getItem('wa_api_key') || '';
 let selectedChat = null;
 let allMessages = [];
@@ -250,8 +250,15 @@ async function loadAll() {
         allMessages = await (await fetch(API_URL + '/api/bot/messages')).json();
         if (selectedChat) renderMessages(selectedChat);
 
-        // Channel info
+        // Channel info — auto-detect channel ID
         if (apiKey) {
+            if (!CH_ID) {
+                const list = await api('GET', '/api/channels');
+                if (list.success && list.data && list.data.channels && list.data.channels.length > 0) {
+                    CH_ID = list.data.channels[0].id;
+                }
+            }
+            if (!CH_ID) return;
             const ch = await api('GET', '/api/channels/' + CH_ID);
             if (ch.success && ch.data) {
                 document.getElementById('chName').textContent = ch.data.name || 'Canal';
