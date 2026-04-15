@@ -67,17 +67,17 @@ class Message(BaseModel):
     recipient: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # ── Tipo y contenido ──────────────────────────────────────────
-    type: Mapped[MessageType] = mapped_column(
-        Enum(MessageType, name="message_type", native_enum=False),
-        default=MessageType.TEXT,
+    type: Mapped[str] = mapped_column(
+        String(20),
+        default="text",
         nullable=False,
     )
     content: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # ── Estado de entrega ─────────────────────────────────────────
-    status: Mapped[MessageStatus] = mapped_column(
-        Enum(MessageStatus, name="message_status", native_enum=False),
-        default=MessageStatus.PENDING,
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="pending",
         nullable=False,
     )
 

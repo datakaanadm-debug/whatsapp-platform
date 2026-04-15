@@ -35,9 +35,9 @@ class Channel(BaseModel):
     # ── Datos del canal ───────────────────────────────────────────
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone_number: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    status: Mapped[ChannelStatus] = mapped_column(
-        Enum(ChannelStatus, name="channel_status", native_enum=False),
-        default=ChannelStatus.DISCONNECTED,
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="disconnected",
         nullable=False,
     )
 
