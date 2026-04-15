@@ -11,11 +11,11 @@ WORKDIR /app
 
 # ── Engine (Node.js) — instalar deps + compilar TypeScript
 COPY engine/package*.json engine/tsconfig.json engine/
-RUN cd engine && npm ci 2>/dev/null || cd engine && npm install
+RUN cd engine && npm install
 
 COPY engine/src/ engine/src/
 COPY engine/connect.js engine/
-RUN cd engine && npx tsc && mkdir -p sessions media
+RUN cd engine && npx tsc && mkdir -p sessions media && npm prune --production
 
 # ── API + Bot (Python) ────────────────────────────────
 COPY api/requirements.txt api/
