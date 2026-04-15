@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Platform — Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; }
+
+        .header { background: #111; border-bottom: 1px solid #222; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .header h1 { font-size: 17px; color: #25D366; display: flex; align-items: center; gap: 8px; }
+        .header .right { display: flex; align-items: center; gap: 12px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .status-dot.on { background: #25D366; }
+        .status-dot.off { background: #dc3545; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 4px; margin-bottom: 16px; background: #111; border-radius: 10px; padding: 4px; }
+        .tab { padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #888; transition: all 0.2s; }
+        .tab.active { background: #25D366; color: #000; font-weight: 600; }
+        .tab:hover:not(.active) { color: #fff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Stats bar */
+        .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .stat-card { background: #151515; border: 1px solid #222; border-radius: 10px; padding: 14px; }
+        .stat-card .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card .value { font-size: 22px; font-weight: 700; color: #fff; margin-top: 4px; }
+        .stat-card .value.green { color: #25D366; }
+
+        /* Conversations */
+        .conversations { display: grid; grid-template-columns: 280px 1fr; gap: 16px; height: calc(100vh - 220px); }
+        .chat-list { background: #111; border: 1px solid #222; border-radius: 12px; overflow-y: auto; }
+        .chat-item { padding: 12px 16px; border-bottom: 1px solid #1a1a1a; cursor: pointer; transition: background 0.2s; }
+        .chat-item:hover, .chat-item.active { background: #1a1a1a; }
+        .chat-item .name { font-size: 14px; font-weight: 600; }
+        .chat-item .preview { font-size: 12px; color: #888; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-item .time { font-size: 10px; color: #555; float: right; }
+        .chat-item .count { background: #25D366; color: #000; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; float: right; margin-top: 4px; }
+
+        .messages-panel { background: #111; border: 1px solid #222; border-radius: 12px; display: flex; flex-direction: column; }
+        .messages-header { padding: 12px 16px; border-bottom: 1px solid #222; font-weight: 600; font-size: 14px; }
+        .messages-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; word-wrap: break-word; }
+        .msg.in { background: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg.out { background: #054640; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg .msg-time { font-size: 10px; color: #666; margin-top: 4px; }
+        .msg .msg-sender { font-size: 11px; color: #25D366; margin-bottom: 2px; }
+        .empty-chat { display: flex; align-items: center; justify-content: center; height: 100%; color: #444; font-size: 14px; }
+
+        /* Agent config */
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
+        .config-card { background: #151515; border: 1px solid #222; border-radius: 12px; padding: 20px; }
+        .config-card h3 { font-size: 15px; color: #25D366; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .config-card .field { margin-bottom: 10px; }
+        .config-card .field-label { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 3px; }
+        .config-card .field-value { font-size: 13px; color: #ddd; }
+        .config-card .field-value.mono { font-family: monospace; background: #0a0a0a; padding: 8px; border-radius: 6px; font-size: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge.green { background: rgba(37,211,102,0.15); color: #25D366; }
+        .badge.blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .badge.yellow { background: rgba(234,179,8,0.15); color: #eab308; }
+
+        /* Channel section */
+        .channel-bar { background: #151515; border: 1px solid #222; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+        .channel-info { display: flex; align-items: center; gap: 12px; }
+        .channel-info .ch-name { font-size: 15px; font-weight: 600; }
+        .channel-info .ch-phone { font-size: 12px; color: #888; }
+        .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: #25D366; color: #000; }
+        .btn-primary:hover { background: #1da851; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-sm { padding: 6px 12px; font-size: 11px; }
+
+        /* API Key bar */
+        .api-key-bar { background: #151515; border: 1px solid #222; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; display: flex; gap: 8px; align-items: center; }
+        .api-key-bar input { flex: 1; background: #0a0a0a; border: 1px solid #333; border-radius: 6px; padding: 8px 12px; color: #fff; font-family: monospace; font-size: 12px; }
+        .api-key-bar input:focus { outline: none; border-color: #25D366; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        WhatsApp Platform
+    </h1>
+    <div class="right">
+        <span class="status-dot" id="dotEngine"></span> <span style="font-size:11px;color:#888">Engine</span>
+        <span class="status-dot" id="dotBot" style="margin-left:8px"></span> <span style="font-size:11px;color:#888">Arty</span>
+    </div>
+</div>
+
+<div class="container">
+    <!-- API Key -->
+    <div class="api-key-bar">
+        <span style="font-size:12px;color:#666;">API Key:</span>
+        <input type="text" id="apiKeyInput" placeholder="ak_..." />
+        <button class="btn btn-primary btn-sm" onclick="init()">Conectar</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-card"><div class="label">Mensajes recibidos</div><div class="value green" id="statIn">0</div></div>
+        <div class="stat-card"><div class="label">Respuestas enviadas</div><div class="value green" id="statOut">0</div></div>
+        <div class="stat-card"><div class="label">Tokens usados</div><div class="value" id="statTokens">0</div></div>
+        <div class="stat-card"><div class="label">Chats activos</div><div class="value" id="statChats">0</div></div>
+        <div class="stat-card"><div class="label">Estado</div><div class="value green" id="statStatus">...</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('conversations')">Conversaciones</div>
+        <div class="tab" onclick="switchTab('config')">Agente & Config</div>
+        <div class="tab" onclick="switchTab('channel')">Canal</div>
+    </div>
+
+    <!-- Tab: Conversations -->
+    <div class="tab-content active" id="tab-conversations">
+        <div class="conversations">
+            <div class="chat-list" id="chatList">
+                <div style="padding:20px;color:#555;text-align:center;font-size:13px;">Esperando conversaciones...</div>
+            </div>
+            <div class="messages-panel">
+                <div class="messages-header" id="msgHeader">Selecciona una conversacion</div>
+                <div class="messages-body" id="msgBody">
+                    <div class="empty-chat">Los mensajes apareceran aqui</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Config -->
+    <div class="tab-content" id="tab-config">
+        <div class="config-grid">
+            <div class="config-card">
+                <h3>&#129302; Agente Activo</h3>
+                <div class="field"><div class="field-label">Nombre</div><div class="field-value">Arty</div></div>
+                <div class="field"><div class="field-label">Modelo</div><div class="field-value"><span class="badge blue">claude-sonnet-4-6</span></div></div>
+                <div class="field"><div class="field-label">Estado</div><div class="field-value"><span class="badge green" id="agentStatus">Activo</span></div></div>
+                <div class="field"><div class="field-label">Historial por chat</div><div class="field-value">20 mensajes (memoria en RAM)</div></div>
+                <div class="field"><div class="field-label">Max tokens respuesta</div><div class="field-value">1,024</div></div>
+            </div>
+            <div class="config-card">
+                <h3>&#9881;&#65039; Pipeline</h3>
+                <div class="field"><div class="field-label">Flujo</div>
+                    <div class="field-value mono">WhatsApp &rarr; Baileys Engine &rarr; Redis
+  &rarr; AI Pipeline (run_ai.py)
+  &rarr; Claude API &rarr; Redis &rarr; Engine &rarr; WhatsApp</div>
+                </div>
+                <div class="field"><div class="field-label">Componentes</div>
+                    <div class="field-value">
+                        <span class="badge green">Engine (Baileys)</span>
+                        <span class="badge blue">API (FastAPI)</span>
+                        <span class="badge yellow">Bot (Claude)</span>
+                    </div>
+                </div>
+                <div class="field"><div class="field-label">Redis</div><div class="field-value" style="font-size:12px;">Upstash (serverless) — colas LPUSH/RPOP</div></div>
+            </div>
+            <div class="config-card" style="grid-column: 1 / -1;">
+                <h3>&#128220; System Prompt</h3>
+                <div class="field"><div class="field-label">Archivo: config/prompts.yaml (7,881 caracteres)</div>
+                    <div class="field-value mono" id="promptPreview">Cargando...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Channel -->
+    <div class="tab-content" id="tab-channel">
+        <div class="channel-bar">
+            <div class="channel-info">
+                <div>
+                    <div class="ch-name" id="chName">Mi WhatsApp</div>
+                    <div class="ch-phone" id="chPhone">Sin vincular</div>
+                </div>
+                <span class="badge green" id="chStatus">...</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary btn-sm" onclick="startSession()">Conectar WhatsApp</button>
+                <button class="btn btn-danger btn-sm" onclick="logoutSession()">Desconectar</button>
+            </div>
+        </div>
+        <!-- QR Section -->
+        <div id="qrSection" style="display:none;background:#151515;border:1px solid #222;border-radius:12px;padding:24px;text-align:center;">
+            <h3 style="color:#25D366;margin-bottom:8px;">Escanea el codigo QR</h3>
+            <p style="font-size:13px;color:#888;margin-bottom:16px;">WhatsApp > Dispositivos vinculados > Vincular</p>
+            <div style="display:inline-block;background:#fff;padding:16px;border-radius:12px;">
+                <img id="qrImage" src="" style="width:280px;height:280px;" />
+            </div>
+        </div>
+        <div style="margin-top:16px;background:#151515;border:1px solid #222;border-radius:12px;padding:16px;">
+            <h3 style="font-size:14px;color:#888;margin-bottom:12px;">Informacion del canal</h3>
+            <div style="font-family:monospace;font-size:12px;color:#666;" id="channelInfo">Cargando...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_URL = window.location.origin;
+const CH_ID = '3e9c7ac1-26c3-4bb4-8ce1-8f60b01919b6';
+let apiKey = localStorage.getItem('wa_api_key') || '';
+let selectedChat = null;
+let allMessages = [];
+let pollInterval = null;
+
+document.getElementById('apiKeyInput').value = apiKey;
+if (apiKey) init();
+
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', t.textContent.toLowerCase().includes(name.slice(0,4))));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+}
+
+async function api(method, path) {
+    const r = await fetch(API_URL + path, { method, headers: { 'X-API-Key': apiKey } });
+    return r.json();
+}
+
+async function init() {
+    apiKey = document.getElementById('apiKeyInput').value.trim();
+    localStorage.setItem('wa_api_key', apiKey);
+    loadAll();
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(loadAll, 3000);
+}
+
+async function loadAll() {
+    try {
+        // Stats
+        const stats = await (await fetch(API_URL + '/api/bot/stats')).json();
+        document.getElementById('statIn').textContent = stats.messages_in || 0;
+        document.getElementById('statOut').textContent = stats.messages_out || 0;
+        document.getElementById('statTokens').textContent = ((stats.tokens_in||0) + (stats.tokens_out||0)).toLocaleString();
+        document.getElementById('statStatus').textContent = stats.ai_enabled ? 'Activo' : 'Inactivo';
+        document.getElementById('agentStatus').textContent = stats.ai_enabled ? 'Activo' : 'Inactivo';
+        document.getElementById('dotBot').className = 'status-dot ' + (stats.ai_enabled ? 'on' : 'off');
+
+        // Chats
+        const chats = await (await fetch(API_URL + '/api/bot/chats')).json();
+        document.getElementById('statChats').textContent = chats.length;
+        renderChatList(chats);
+
+        // Messages
+        allMessages = await (await fetch(API_URL + '/api/bot/messages')).json();
+        if (selectedChat) renderMessages(selectedChat);
+
+        // Channel info
+        if (apiKey) {
+            const ch = await api('GET', '/api/channels/' + CH_ID);
+            if (ch.success && ch.data) {
+                document.getElementById('chName').textContent = ch.data.name || 'Canal';
+                document.getElementById('chPhone').textContent = ch.data.phone_number || 'Sin vincular';
+                document.getElementById('chStatus').textContent = ch.data.status || '?';
+                document.getElementById('dotEngine').className = 'status-dot ' + (ch.data.status === 'connected' ? 'on' : 'off');
+                document.getElementById('channelInfo').textContent = JSON.stringify(ch.data, null, 2);
+            }
+        }
+
+        // Prompt preview
+        document.getElementById('promptPreview').textContent =
+            'Eres Arty, el asistente virtual de marcelArt.\n\n'
+            + '- Plataforma SaaS de invitaciones digitales\n'
+            + '- Tono: amigable, calido y profesional\n'
+            + '- Capacidades: FAQ, planes, precios, guia de uso\n'
+            + '- Modelo: claude-sonnet-4-6 | Max tokens: 1024\n'
+            + '- Horario bot: 24/7 | Soporte humano: L-V 9-18h\n\n'
+            + 'Archivo completo: config/prompts.yaml (7,881 chars)';
+
+    } catch (e) { console.error(e); }
+}
+
+function renderChatList(chats) {
+    const el = document.getElementById('chatList');
+    if (!chats.length) {
+        el.innerHTML = '<div style="padding:20px;color:#555;text-align:center;font-size:13px;">Sin conversaciones aun</div>';
+        return;
+    }
+    el.innerHTML = chats.map(c => {
+        const name = c.sender || c.chat_id.split('@')[0];
+        const time = c.last_time ? new Date(c.last_time).toLocaleTimeString('es', {hour:'2-digit',minute:'2-digit'}) : '';
+        return `<div class="chat-item ${selectedChat===c.chat_id?'active':''}" onclick="selectChat('${c.chat_id}')">
+            <span class="time">${time}</span>
+            <div class="name">${name}</div>
+            <div class="preview">${c.last_message||''}</div>
+            <span class="count">${c.message_count||0}</span>
+        </div>`;
+    }).join('');
+}
+
+function selectChat(chatId) {
+    selectedChat = chatId;
+    renderMessages(chatId);
+    document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+    event.target.closest('.chat-item')?.classList.add('active');
+}
+
+function renderMessages(chatId) {
+    const filtered = allMessages.filter(m => m.chat_id === chatId).reverse();
+    const header = document.getElementById('msgHeader');
+    const body = document.getElementById('msgBody');
+
+    if (!filtered.length) {
+        header.textContent = chatId.split('@')[0];
+        body.innerHTML = '<div class="empty-chat">Sin mensajes</div>';
+        return;
+    }
+
+    const name = filtered.find(m => m.dir==='in')?.sender || chatId.split('@')[0];
+    header.textContent = name;
+
+    body.innerHTML = filtered.map(m => {
+        const time = m.time ? new Date(m.time).toLocaleTimeString('es', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+        return `<div class="msg ${m.dir}">
+            ${m.dir==='in' ? `<div class="msg-sender">${m.sender||'Usuario'}</div>` : '<div class="msg-sender">Arty</div>'}
+            ${m.text}
+            <div class="msg-time">${time}</div>
+        </div>`;
+    }).join('');
+
+    body.scrollTop = body.scrollHeight;
+}
+
+async function startSession() {
+    await api('POST', '/api/channels/' + CH_ID + '/start');
+    document.getElementById('qrSection').style.display = 'block';
+    const img = document.getElementById('qrImage');
+    const refreshQR = () => { img.src = API_URL + '/api/channels/' + CH_ID + '/qr.png?t=' + Date.now(); };
+    refreshQR();
+    const iv = setInterval(async () => {
+        refreshQR();
+        try {
+            const ch = await api('GET', '/api/channels/' + CH_ID);
+            if (ch.success && ch.data && ch.data.status === 'connected') {
+                clearInterval(iv);
+                document.getElementById('qrSection').style.display = 'none';
+                alert('WhatsApp conectado!');
+                loadAll();
+            }
+        } catch(e) {}
+    }, 5000);
+}
+
+async function logoutSession() {
+    if (!confirm('Desconectar WhatsApp?')) return;
+    await api('POST', '/api/channels/' + CH_ID + '/logout');
+    loadAll();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.db
+node_modules/
+engine/dist/
+engine/sessions/
+engine/media/
+logs_*.txt
+.pids
+qr.png
+engine/test-live.js
+engine/test-baileys.js
