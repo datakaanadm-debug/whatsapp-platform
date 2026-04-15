@@ -22,7 +22,10 @@ async function connect() {
     if (!redis) redis = new Redis(process.env.REDIS_URL);
     const logger = pino({ level: 'silent' });
 
-    console.log(`[Intento ${attempt}] Conectando a WhatsApp... (sessDir: ${SESS_DIR})`);
+    // Número de teléfono para pairing code (alternativa al QR)
+    const PHONE_NUMBER = process.env.PHONE_NUMBER || '';
+
+    console.log(`[Intento ${attempt}] Conectando a WhatsApp... (sessDir: ${SESS_DIR}, phone: ${PHONE_NUMBER || 'QR mode'})`);
 
     const sock = makeWASocket({
         auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, logger) },
@@ -31,6 +34,28 @@ async function connect() {
     });
 
     sock.ev.on('creds.update', saveCreds);
+
+    // Si hay número de teléfono, solicitar pairing code
+    if (PHONE_NUMBER && !state.creds.registered) {
+        setTimeout(async () => {
+            try {
+                const code = await sock.requestPairingCode(PHONE_NUMBER);
+                console.log('');
+                console.log('============================================');
+                console.log(`  CODIGO DE VINCULACION: ${code}`);
+                console.log('');
+                console.log('  Abre WhatsApp > Dispositivos vinculados');
+                console.log('  > Vincular dispositivo > Vincular con numero');
+                console.log('  > Ingresa el codigo de arriba');
+                console.log('============================================');
+                console.log('');
+                // Guardar en Redis para el dashboard
+                await redis.set(`wa:pairing_code:${CHANNEL_ID}`, code, 'EX', 300);
+            } catch (e) {
+                console.error('Error solicitando pairing code:', e.message);
+            }
+        }, 3000);
+    }
 
     sock.ev.on('connection.update', async (u) => {
         console.log('connection.update:', JSON.stringify({connection: u.connection, qr: !!u.qr, lastDisconnect: u.lastDisconnect?.error?.output?.statusCode}));
